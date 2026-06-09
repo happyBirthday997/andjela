@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>for Andela</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Courier+Prime:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#1a0a1e; cursor:crosshair; user-select:none; }
+  #c { position:absolute; top:0; left:0; width:100%; height:100%; }
+  #hint {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:18px;
+    pointer-events:none; transition:opacity 1.4s ease;
+  }
+  #hint.gone { opacity:0; }
+  .hint-hand { font-size:32px; animation:pulse 1.8s ease-in-out infinite; }
+  .hint-text {
+    color:#f0d0a0; font-size:14px; font-style:italic; letter-spacing:0.1em;
+    font-family:'Courier Prime',monospace; text-align:center; line-height:1.9;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.9), 0 0 20px rgba(0,0,0,0.7);
+  }
+  @keyframes pulse {
+    0%,100%{ transform:scale(1) translateY(0); opacity:0.7; }
+    50%{ transform:scale(1.15) translateY(-4px); opacity:1; }
+  }
+  #ctr {
+    position:absolute; top:30px; right:36px;
+    color:#c09060; font-size:12px; font-family:'Courier Prime',monospace;
+    letter-spacing:0.05em; opacity:0; transition:opacity 0.5s; pointer-events:none;
+  }
+  #msg {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    text-align:center; opacity:0;
+    transition:opacity 3s ease, top 1.8s cubic-bezier(0.25,0.46,0.45,0.94);
+    pointer-events:none;
+    white-space:nowrap; font-family:'EB Garamond',Georgia,serif;
+    background:rgba(20,8,30,0.6); padding:28px 40px; border-radius:4px;
+    backdrop-filter:blur(6px);
+  }
+  #msg.show { opacity:1; }
+  #msg.rise { top:22%; }
+
+  /* ── Letter animation ── */
+  #letter-wrap {
+    position:absolute; inset:0; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    z-index:20;
+  }
+  #letter-wrap.active { pointer-events:auto; }
+
+  #envelope {
+    position:absolute;
+    font-family:'EB Garamond',Georgia,serif;
+    text-align:center;
+    cursor:pointer;
+    transition:transform 0.15s;
+    transform-origin:center center;
+    opacity:0;
+  }
+  #envelope .env-body {
+    font-size:52px;
+    filter:drop-shadow(0 0 18px rgba(255,200,80,0.5));
+    display:block;
+    animation:envFloat 2.8s ease-in-out infinite;
+  }
+  @keyframes envFloat {
+    0%,100%{ transform:translateY(0) rotate(-3deg); }
+    50%{ transform:translateY(-10px) rotate(3deg); }
+  }
+  #envelope .env-hint {
+    display:block; font-size:12px; color:#c09060;
+    font-style:italic; letter-spacing:0.08em; margin-top:6px;
+    font-family:'Courier Prime',monospace;
+    opacity:0.8;
+  }
+
+  #letter {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%) scale(0.7);
+    background:rgba(248,240,220,0.97);
+    border-radius:3px;
+    padding:44px 52px;
+    text-align:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.8s ease, transform 0.8s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow:0 8px 40px rgba(0,0,0,0.5);
+    font-family:'EB Garamond',Georgia,serif;
+    white-space:nowrap;
+    z-index:30;
+  }
+  #letter.open {
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+    pointer-events:auto;
+  }
+  #letter .l-pre {
+    display:block; font-size:13px; color:#a08060;
+    font-style:italic; letter-spacing:0.06em; margin-bottom:18px;
+    font-family:'Courier Prime',monospace;
+  }
+  #letter .l-main {
+    display:block; font-size:clamp(20px,3vw,28px);
+    color:#1a0e08; font-weight:400; letter-spacing:0.02em;
+    margin-bottom:8px;
+  }
+  #letter .l-sub {
+    display:block; font-size:clamp(14px,2vw,18px);
+    color:#806040; font-style:italic;
+  }
+  #letter .l-close {
+    display:block; margin-top:28px; font-size:12px;
+    color:#b09070; font-family:'Courier Prime',monospace;
+    letter-spacing:0.05em; cursor:pointer;
+  }
+  #letter .l-close:hover { color:#806040; }
+  #msg .dancer { display:block; font-size:38px; margin-bottom:14px; animation:sway 3s ease-in-out infinite; }
+  @keyframes sway {
+    0%,100%{ transform:rotate(-4deg); }
+    50%{ transform:rotate(4deg); }
+  }
+  #msg .a {
+    display:block; font-size:clamp(22px,3.2vw,32px); color:#f8e8d0;
+    margin-bottom:10px; letter-spacing:0.02em; font-weight:400;
+  }
+  #msg .b {
+    display:block; font-size:clamp(17px,2.4vw,22px); color:#c09878;
+    font-style:italic; letter-spacing:0.04em; line-height:2.2;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hint">
+  <div class="hint-hand">✦</div>
+  <div class="hint-text">click anywhere to plant a flower<br><span style="font-size:11px;opacity:0.6;">(at least seven times)</span></div>
+</div>
+
+<div id="letter-wrap">
+  <div id="envelope">
+    <span class="env-body">✉️</span>
+    <span class="env-hint">click to open</span>
+  </div>
+  <div id="letter">
+    <span class="l-pre">p.p.s.</span>
+    <span class="l-main">by the way,</span>
+    <span class="l-main">I have a crush on you.</span>
+    <span class="l-sub">(I figured the flowers were a hint,<br>but just to be clear.)</span>
+    <span class="l-close" id="letter-close">[ close ]</span>
+  </div>
+</div>
+
+<div id="ctr"></div>
+
+<div id="msg">
+  <span class="dancer">🩰</span>
+  <span class="a">I can't give you flowers, you're too far away.</span>
+  <span class="b">but I planted these for you.<br>happy birthday, Anđela.</span>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const hint   = document.getElementById('hint');
+const ctrEl  = document.getElementById('ctr');
+const msg    = document.getElementById('msg');
+
+let W, H, clouds=[], flowers=[], sparks=[], ripples=[], total=0, revealed=false;
+let postOffice = null;
+let scooter    = null;
+let letter     = null; // {x, y, tx, ty, prog, phase:'fly'|'hover'|'open'}
+let nightProgress = 0;
+let roadProgress  = 0;
+let nightStars = [];
+const REVEAL=7;
+const POST_OFFICE_AT=13;
+const NIGHT_AT=23;
+const SCOOTER_AT=52;
+const LETTER_AT=137;
+const COLS=13, ROWS=20;
+
+function buildNightStars(){
+  nightStars=[];
+  for(let i=0;i<220;i++) nightStars.push({
+    x:Math.random()*W, y:Math.random()*H*0.78,
+    r:Math.random()*1.3+0.2,
+    base:Math.random()*0.5+0.2,
+    ph:Math.random()*Math.PI*2,
+    sp:Math.random()*0.018+0.004
+  });
+}
+
+function resize(){
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  buildClouds();
+  buildNightStars();
+  buildStones();
+}
+
+// ── Pixel cloud types (each cloud is a grid of cells) ───────────────────────
+// We'll draw clouds as pixel-art blocks drifting slowly
+function buildClouds(){
+  clouds = [];
+  const count = 12 + Math.floor(Math.random()*4);
+  for(let i=0;i<count;i++){
+    const S = Math.floor(Math.random()*4)+5;
+    const type = Math.floor(Math.random()*3);
+    clouds.push({
+      x: Math.random()*W*1.6 - W*0.3,
+      y: H*(0.03 + Math.random()*0.48),
+      S,
+      type,
+      speed: (0.06 + Math.random()*0.2) * (Math.random()<0.5?1:-1),
+      alpha: 0.55 + Math.random()*0.35,
+    });
+  }
+}
+
+// Cloud grids — different shapes
+const CLOUD_GRIDS = [
+  [ // wide fluffy
+    [0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+  ],
+  [ // smaller puff
+    [0,0,1,1,1,1,0,0,0,0],
+    [0,1,1,1,1,1,1,1,0,0],
+    [1,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,0],
+    [0,1,1,1,1,1,1,1,0,0],
+  ],
+  [ // thin wispy
+    [0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0],
+    [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+    [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0],
+    [0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0],
+  ],
+];
+
+function drawCloud(cloud, t, horizon){
+  const g = CLOUD_GRIDS[cloud.type];
+  const S = cloud.S;
+  const x = Math.round(cloud.x);
+  const y = Math.round(cloud.y + Math.sin(t*0.3 + cloud.x)*2);
+  const totalRows = g.length;
+  const sunCX = W * 0.42;
+
+  // Distance from sun affects warmth of lit color
+  const distFromSun = Math.abs(x + (g[0].length*S)/2 - sunCX) / W;
+  const warmth = Math.max(0, 1 - distFromSun * 1.8);
+
+  // yRatio: how high in sky (0=top, 1=horizon)
+  const yRatio = y / horizon;
+
+  g.forEach((row, r)=>{
+    const rowRatio = r / totalRows; // 0=top of cloud, 1=bottom
+    row.forEach((v, c)=>{
+      if(!v) return;
+
+      // Is this pixel on the top edge? (lit by sun)
+      const isTopEdge = r === 0 || (r <= 1 && (!g[r-1] || !g[r-1][c]));
+      const isMid     = rowRatio < 0.45;
+      const isBottom  = rowRatio >= 0.45;
+
+      let col;
+      if(isTopEdge){
+        // Bright lit top: golden-white highlight
+        const r_ = Math.round(255);
+        const g_ = Math.round(220 + warmth*30);
+        const b_ = Math.round(150 + warmth*50);
+        col = `rgba(${r_},${g_},${b_},${cloud.alpha})`;
+      } else if(isMid){
+        // Mid: warm rose-orange, varies by sky position
+        if(yRatio < 0.18){
+          col = `rgba(200,100,160,${cloud.alpha * 0.9})`; // high: deep magenta
+        } else if(yRatio < 0.32){
+          col = `rgba(230,110,130,${cloud.alpha * 0.9})`; // mid: rose
+        } else {
+          col = `rgba(240,130,80,${cloud.alpha * 0.9})`; // low: orange
+        }
+      } else {
+        // Bottom: darker, shadowed underside — deep purple/navy
+        if(yRatio < 0.2){
+          col = `rgba(80,30,80,${cloud.alpha * 0.85})`;  // high: dark purple
+        } else if(yRatio < 0.35){
+          col = `rgba(100,40,60,${cloud.alpha * 0.85})`; // mid: dark wine
+        } else {
+          col = `rgba(90,40,20,${cloud.alpha * 0.8})`;   // low: dark brown
+        }
+      }
+
+      ctx.fillStyle = col;
+      ctx.fillRect(x+c*S, y+r*S, S, S);
+    });
+  });
+}
+
+// ── Sun pixel art — fades out as night comes ─────────────────────────────────
+function drawSun(horizon, np){
+  const sunAlpha = Math.max(0, 1 - np * 2.5);
+  if(sunAlpha <= 0) return;
+  ctx.globalAlpha = sunAlpha;
+  const S = 11; // bigger pixel block
+  const sunCX = W * 0.42;
+  const R = 6; // radius in blocks — bigger sun
+  const sunOX = Math.round(sunCX - R*S);
+  const sunOY = Math.round(horizon - R*S * 0.75);
+
+  // Large atmospheric glow — two layers
+  const glowR1 = R*S*7;
+  const glow1 = ctx.createRadialGradient(sunCX, horizon, S*2, sunCX, horizon, glowR1);
+  glow1.addColorStop(0,  'rgba(255,220,80,0.5)');
+  glow1.addColorStop(0.15,'rgba(255,150,40,0.38)');
+  glow1.addColorStop(0.4,'rgba(220,60,50,0.22)');
+  glow1.addColorStop(0.7,'rgba(160,30,100,0.10)');
+  glow1.addColorStop(1,  'rgba(100,10,80,0)');
+  ctx.fillStyle=glow1;
+  ctx.fillRect(sunCX-glowR1, horizon-glowR1, glowR1*2, glowR1*2);
+
+  // Inner bright core glow
+  const glowR2 = R*S*2.5;
+  const glow2 = ctx.createRadialGradient(sunCX, horizon, 0, sunCX, horizon, glowR2);
+  glow2.addColorStop(0,  'rgba(255,240,160,0.7)');
+  glow2.addColorStop(0.5,'rgba(255,180,60,0.4)');
+  glow2.addColorStop(1,  'rgba(255,100,20,0)');
+  ctx.fillStyle=glow2;
+  ctx.fillRect(sunCX-glowR2, horizon-glowR2, glowR2*2, glowR2*2);
+
+  // Sun disk
+  for(let r=-R; r<=R; r++){
+    for(let cc=-R; cc<=R; cc++){
+      if(cc*cc + r*r > R*R) continue;
+      const px = sunOX + (cc+R)*S;
+      const py = sunOY + (r+R)*S;
+      if(py + S > horizon) continue;
+      const dist = Math.sqrt(cc*cc+r*r)/R;
+      let col;
+      if(dist < 0.25)      col = '#fffce0';
+      else if(dist < 0.5)  col = '#ffe060';
+      else if(dist < 0.75) col = '#ff9820';
+      else                 col = '#e05010';
+      ctx.fillStyle=col;
+      ctx.fillRect(px, py, S, S);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── Pixel horizon reflection line ────────────────────────────────────────────
+function drawHorizonReflection(horizon){
+  // Shimmering reflection below sun on "water/ground"
+  const sunCX = W * 0.38;
+  for(let i=0;i<6;i++){
+    const w = (6-i)*18 + Math.random()*8;
+    const y = horizon + 6 + i*5;
+    const alpha = (0.25 - i*0.04);
+    ctx.fillStyle=`rgba(255,180,60,${alpha})`;
+    ctx.fillRect(sunCX - w/2, y, w, 3);
+  }
+}
+
+// ── Sky gradient — blends sunset → night ─────────────────────────────────────
+function lerpHex(c1, c2, t){
+  const h1=parseInt(c1.slice(1),16), h2=parseInt(c2.slice(1),16);
+  const r1=(h1>>16)&0xff, g1=(h1>>8)&0xff, b1=h1&0xff;
+  const r2=(h2>>16)&0xff, g2=(h2>>8)&0xff, b2=h2&0xff;
+  return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
+}
+
+function drawSky(horizon, np){
+  const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+  const n = Math.min(1, np);
+  sky.addColorStop(0,    lerpHex('#1a0828','#040610',n));
+  sky.addColorStop(0.25, lerpHex('#3a1040','#080820',n));
+  sky.addColorStop(0.5,  lerpHex('#7a2040','#0c0a28',n));
+  sky.addColorStop(0.72, lerpHex('#c04030','#100830',n));
+  sky.addColorStop(0.88, lerpHex('#e07820','#0e0820',n));
+  sky.addColorStop(1,    lerpHex('#f0b030','#0a0618',n));
+  ctx.fillStyle=sky;
+  ctx.fillRect(0, 0, W, horizon);
+}
+
+// ── Ground / silhouette ──────────────────────────────────────────────────────
+function drawGround(horizon, np){
+  const n = Math.min(1,np);
+  const c0 = `rgb(${Math.round(26-14*n)},${Math.round(12-6*n)},${Math.round(8-2*n)})`;
+  const c1 = `rgb(${Math.round(12-6*n)},${Math.round(10-5*n)},${Math.round(6-2*n)})`;
+  const ground = ctx.createLinearGradient(0, horizon, 0, H);
+  ground.addColorStop(0, c0);
+  ground.addColorStop(1, c1);
+  ctx.fillStyle=ground;
+  ctx.fillRect(0, horizon, W, H-horizon);
+  // horizon line fades from orange to cool blue
+  const hAlpha = Math.max(0, 0.25 - np*0.25);
+  if(hAlpha>0){
+    ctx.fillStyle=`rgba(240,120,30,${hAlpha})`;
+    ctx.fillRect(0, horizon-2, W, 5);
+  }
+}
+
+// ── Pixel crescent moon ───────────────────────────────────────────────────────
+function drawMoon(np){
+  if(np <= 0) return;
+  const alpha = Math.min(1, np * 2); // fades in over first half of transition
+  const S = 6;
+  const M = [
+    [0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,0,0,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+    [0,1,1,1,1,1,1,1,0,0,1,1,0,0],
+    [0,1,1,1,1,1,1,0,0,0,0,1,0,0],
+    [1,1,1,1,1,1,1,0,0,0,0,1,1,0],
+    [1,1,1,1,1,1,1,0,0,0,0,1,1,0],
+    [1,1,1,1,1,1,1,0,0,0,0,1,1,0],
+    [1,1,1,1,1,1,1,0,0,0,0,1,1,0],
+    [0,1,1,1,1,1,1,0,0,0,0,1,0,0],
+    [0,1,1,1,1,1,1,1,0,0,1,1,0,0],
+    [0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+    [0,0,0,1,1,1,1,1,1,1,0,0,0,0],
+    [0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+  ];
+  const mx = 50;
+  const my = 60;
+  const moonColor = '#f8f0c8';
+  const moonEdge  = '#e0d090';
+
+  // radial glow
+  const gx=mx+7*S, gy=my+7*S;
+  const grd=ctx.createRadialGradient(gx,gy,S,gx,gy,S*9);
+  grd.addColorStop(0,`rgba(255,245,180,${0.18*alpha})`);
+  grd.addColorStop(1,'rgba(255,245,180,0)');
+  ctx.fillStyle=grd;
+  ctx.globalAlpha=1;
+  ctx.fillRect(mx-S*2,my-S*2,S*18,S*18);
+
+  // pixels
+  ctx.globalAlpha=alpha;
+  M.forEach((row,r)=>row.forEach((v,c)=>{
+    if(!v) return;
+    ctx.fillStyle=(r<7&&c<6)?moonColor:moonEdge;
+    ctx.fillRect(mx+c*S,my+r*S,S,S);
+  }));
+  // craters
+  ctx.fillStyle=`rgba(190,170,100,${0.35*alpha})`;
+  [[2,4],[3,8],[1,10],[4,5]].forEach(([c,r])=>{
+    if(M[r]&&M[r][c]) ctx.fillRect(mx+c*S+S*0.15,my+r*S+S*0.15,S*0.7,S*0.7);
+  });
+  ctx.globalAlpha=1;
+}
+
+// ── Post Office — two-story charming building, sunset silhouette ─────────────
+// Inspired by isometric café style but in pixel art, dark sunset palette
+// S=5px. 28 cols × 34 rows.
+//
+// Color key:
+//  1 = wall (deep purple-brown)
+//  2 = dark outline / shadow
+//  3 = roof tiles (dark teal-grey)
+//  4 = sign band (warm amber)
+//  5 = window glow (warm orange)
+//  6 = window frame (dark)
+//  7 = door (very dark)
+//  8 = awning (dark warm tone)
+//  9 = chimney
+//  A(10) = lit edge highlight (warm orange-gold rim light from sunset)
+//  B(11) = lantern post
+//  C(12) = lantern glow
+
+const PO_GRID = [
+  [0,0,0,0,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,0,0,0,0,0], // 0  chimneys
+  [0,0,0,0,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,0,0,0,0,0], // 1  chimneys
+  [0,0,0,0,9,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,9,9,0,0,0,0,0], // 2  chimneys
+  [0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0,0], // 3  roof peak
+  [0,0,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,0], // 4  roof top
+  [0,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2], // 5  roof mid
+  [0,2,3,10,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,10,3,3,2], // 6  roof lit edge
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2], // 7  roof base
+  [2,1,1,10,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,1,1,1,2], // 8  wall top (rim light on edges)
+  [2,1,10,6,5,5,5,6,1,1,1,1,1,6,5,5,5,6,1,1,1,1,10,6,5,5,6,2], // 9  windows top
+  [2,1,10,6,5,5,5,6,1,1,1,1,1,6,5,5,5,6,1,1,1,1,10,6,5,5,6,2], //10  windows mid
+  [2,1,10,6,5,5,5,6,1,1,1,1,1,6,5,5,5,6,1,1,1,1,10,6,5,5,6,2], //11  windows mid
+  [2,1,10,6,6,6,6,6,1,1,1,1,1,6,6,6,6,6,1,1,1,1,10,6,6,6,6,2], //12  window sill
+  [2,1,10,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,1,1,1,1,2], //13  wall
+  [2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,2], //14  sign band
+  [2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,2], //15  sign band (text here)
+  [2,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,2], //16  sign band
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2], //17  second floor base
+  [2,1,10,6,5,5,6,1,1,1,1,8,8,8,8,8,8,8,1,1,1,6,10,6,5,5,6,2], //18  ground floor - awning top
+  [2,1,10,6,5,5,6,1,1,1,8,8,8,8,8,8,8,8,8,1,1,6,10,6,5,5,6,2], //19  ground floor - awning
+  [2,1,10,6,5,5,6,1,1,8,8,8,8,8,8,8,8,8,8,8,1,6,10,6,5,5,6,2], //20  ground floor - awning
+  [2,1,10,6,6,6,6,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,10,6,6,6,6,2], //21  ground floor sill
+  [2,1,10,1,1,1,1,2,7,7,7,7,7,7,7,7,7,7,7,2,1,1,10,1,1,1,1,2], //22  door frame top
+  [2,1,10,1,1,1,1,2,7,5,5,7,2,7,5,5,7,7,7,2,1,1,10,1,1,1,1,2], //23  door panels (glass panes)
+  [2,1,10,1,1,1,1,2,7,5,5,7,2,7,5,5,7,7,7,2,1,1,10,1,1,1,1,2], //24  door panels
+  [2,1,10,1,1,1,1,2,7,7,7,7,2,7,7,7,7,6,7,2,1,1,10,1,1,1,1,2], //25  door mid + handle (6)
+  [2,1,10,1,1,1,1,2,7,7,7,7,7,7,7,7,7,7,7,2,1,1,10,1,1,1,1,2], //26  door bottom
+  [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2], //27  base
+  [0,0,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,0], //28  step 1
+  [0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0,0], //29  step base
+];
+
+// Lantern — drawn separately to the right of the building
+const LN_GRID = [
+  [0,2,2,0],   // top cap
+  [2,12,12,2], // glow top
+  [2,12,12,2], // glow mid
+  [2,12,12,2], // glow bot
+  [0,2,2,0],   // cap bottom
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [0,2,2,0],   // post
+  [2,2,2,2],   // base
+];
+
+const PO_COLORS = {
+  1:  '#2a1828', // dark purple-brown wall
+  2:  '#14080e', // near-black outline
+  3:  '#1e2830', // dark teal roof
+  4:  '#c87820', // warm amber sign
+  5:  '#ffcc60', // warm window glow
+  6:  '#180e18', // dark window frame
+  7:  '#100810', // very dark door
+  8:  '#3a2018', // dark awning
+  9:  '#201418', // chimney dark
+  10: '#e87020', // sunset rim light — warm orange edge highlight
+  11: '#1e1420', // lantern post dark
+  12: '#ffdd80', // lantern glow warm
+};
+
+class PostOffice {
+  constructor(){
+    this.S     = 5;
+    this.cols  = PO_GRID[0].length;
+    this.rows  = PO_GRID.length;
+    this.prog  = 0;
+    this.speed = 0.005;
+    this.pulse = 0;
+  }
+  update(np){
+    if(this.prog < 1) this.prog = Math.min(1, this.prog + this.speed);
+    this.pulse += 0.025;
+  }
+  draw(horizon, np=0){
+    const S      = this.S;
+    const totalH = this.rows * S;
+    const baseY  = horizon + 30;
+    const ox     = Math.round(W * 0.68 - (this.cols * S) / 2);
+    const oy     = Math.round(baseY - totalH);
+
+    const visRows  = Math.ceil(this.prog * this.rows);
+    const startRow = this.rows - visRows;
+
+    // draw pixel grid
+    for(let r = startRow; r < this.rows; r++){
+      const screenY = Math.round(oy + r * S);
+      for(let c = 0; c < this.cols; c++){
+        const v = PO_GRID[r][c];
+        if(!v) continue;
+        let color = PO_COLORS[v];
+
+        // window glow: sunset = warm orange, night = turn off (dim blue)
+        if(v === 5){
+          if(np < 0.5){
+            const bri = 0.8 + Math.sin(this.pulse + c * 0.5) * 0.2;
+            color = `rgb(255,${Math.round(190*bri)},${Math.round(50*bri)})`;
+          } else {
+            // windows go dark at night — only a faint cold blue remains
+            const dim = Math.max(0, 1 - (np-0.5)*4);
+            color = `rgb(${Math.round(255*dim)},${Math.round(190*dim)},${Math.round(80*dim)})`;
+          }
+        }
+        // rim light: fades to cool moonlight blue at night
+        if(v === 10){
+          if(np < 0.5){
+            const rim = 0.75 + Math.sin(this.pulse * 0.4) * 0.25;
+            color = `rgb(${Math.round(232*rim)},${Math.round(112*rim)},${Math.round(32*rim)})`;
+          } else {
+            // cool silvery moonlight rim
+            const t2 = (np-0.5)*2;
+            const warm = 1-t2;
+            const r_ = Math.round(232*warm + 160*t2);
+            const g_ = Math.round(112*warm + 170*t2);
+            const b_ = Math.round(32*warm  + 200*t2);
+            color = `rgb(${r_},${g_},${b_})`;
+          }
+        }
+
+        ctx.fillStyle = color;
+        ctx.fillRect(ox + c*S, screenY, S, S);
+      }
+    }
+
+    // "POST OFFICE" on sign band
+    if(this.prog > 0.4){
+      const a = Math.min(1,(this.prog-0.4)/0.25);
+      const signTopY = Math.round(oy + 14 * S);
+      const signH    = 3 * S;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle   = '#180808';
+      ctx.font        = `bold ${Math.round(signH * 0.88)}px 'Courier Prime', monospace`;
+      ctx.textAlign   = 'center';
+      ctx.textBaseline= 'middle';
+      ctx.fillText('POST OFFICE', ox + (this.cols * S) / 2, signTopY + signH / 2);
+      ctx.restore();
+    }
+
+    // Lantern — grows more dramatic at night
+    if(this.prog > 0.6){
+      const la  = Math.min(1,(this.prog-0.6)/0.3);
+      const lS  = S;
+      const lx  = ox + this.cols * S + 6;
+      const ly  = Math.round(baseY - LN_GRID.length * lS);
+      ctx.globalAlpha = la;
+      const lf  = 0.85 + Math.sin(this.pulse * 1.2) * 0.15;
+      LN_GRID.forEach((row,r)=>row.forEach((v,c)=>{
+        if(!v) return;
+        let col = v===12
+          ? `rgb(255,${Math.round(220*lf)},${Math.round(100*lf)})`
+          : PO_COLORS[11];
+        ctx.fillStyle = col;
+        ctx.fillRect(lx+c*lS, ly+r*lS, lS, lS);
+      }));
+
+      // lantern halo — gets bigger and more dramatic at night
+      const glowX  = lx + lS;
+      const glowY  = ly + 2 * lS;
+      const haloR  = lS * (5 + np * 10); // grows with night
+      const haloA  = (0.25 + np * 0.4) * la;
+      const grd = ctx.createRadialGradient(glowX, glowY, 1, glowX, glowY, haloR);
+      grd.addColorStop(0,`rgba(255,210,80,${haloA})`);
+      grd.addColorStop(0.4,`rgba(255,160,40,${haloA*0.5})`);
+      grd.addColorStop(1,'rgba(255,120,20,0)');
+      ctx.fillStyle = grd;
+      ctx.fillRect(glowX-haloR, glowY-haloR, haloR*2, haloR*2);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+// ── Flowers (identical to night version) ────────────────────────────────────
+const PAL=[
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#c94070','#e05585','#f07aa0','#ffc0cb'],c:'#fff0a0'},
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#a02050','#c03060','#e04080','#f080a0'],c:'#ffe0e8'},
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#e8a020','#f0b830','#f5c840','#fad060'],c:'#3a2010'},
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#d08010','#e09020','#f0a830','#f8c050'],c:'#2a1808'},
+  {stem:'#4a5a2a',leaf:'#5a7a30',p:['#8070c0','#9080d0','#a090e0','#b8a8f0'],c:'#f0e8d0'},
+  {stem:'#4a5a2a',leaf:'#5a7a30',p:['#6050a0','#7060b8','#8878d0','#a090e8'],c:'#fff0f8'},
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#e8e0d0','#f4f0e8','#fafafa','#ffffff'],c:'#d4a820'},
+  {stem:'#3a5a20',leaf:'#4a7028',p:['#d04060','#e05070','#c03850','#f06080'],c:'#ffe0a0'},
+  {stem:'#3a5a20',leaf:'#4a7028',p:['#d06020','#e07030','#f08040','#f8a060'],c:'#fff0b0'},
+  {stem:'#2a4a20',leaf:'#3a6028',p:['#3870c0','#4880d0','#6098e0','#80b8f0'],c:'#f8f0a0'},
+  {stem:'#385820',leaf:'#487030',p:['#e0906a','#e8a080','#f0b090','#f8c8b0'],c:'#2a180a'},
+  {stem:'#2d4a1e',leaf:'#3d6328',p:['#c020a0','#d830b8','#e850c8','#f878d8'],c:'#fff0f0'},
+];
+
+function buildFlowerGrid(pal, variant){
+  const grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  const cx=6, st=10;
+  function px(c,r,color){ if(r>=0&&r<ROWS&&c>=0&&c<COLS) grid[r][c]=color; }
+  for(let r=st;r<ROWS;r++){
+    px(cx,r,pal.stem);
+    if(r===st+2){ if(variant%2===0){px(cx+1,r,pal.leaf);px(cx+2,r-1,pal.leaf);}else{px(cx-1,r,pal.leaf);px(cx-2,r-1,pal.leaf);} }
+    if(r===st+5){ if(variant%2===0){px(cx-1,r,pal.leaf);px(cx-2,r-1,pal.leaf);}else{px(cx+1,r,pal.leaf);px(cx+2,r-1,pal.leaf);} }
+  }
+  const ft=variant%3;
+  if(ft===0){
+    [[cx,st-3],[cx-1,st-3],[cx+1,st-3],[cx,st+1],[cx-1,st+1],[cx+1,st+1],[cx-3,st-1],[cx-3,st],[cx+3,st-1],[cx+3,st],[cx-2,st-2],[cx+2,st-2]].forEach(([c,r])=>px(c,r,pal.p[0]));
+    [[cx-2,st-1],[cx-2,st],[cx+2,st-1],[cx+2,st],[cx-1,st-2],[cx,st-2],[cx+1,st-2],[cx-1,st],[cx+1,st],[cx-2,st+1],[cx+2,st+1]].forEach(([c,r])=>px(c,r,pal.p[1]));
+    [[cx-1,st-1],[cx,st-1],[cx+1,st-1]].forEach(([c,r])=>px(c,r,pal.p[2]));
+    px(cx,st,pal.c);
+  } else if(ft===1){
+    [[cx,st-4],[cx-3,st-1],[cx+3,st-1]].forEach(([c,r])=>px(c,r,pal.p[0]));
+    [[cx-1,st-3],[cx+1,st-3],[cx-2,st-2],[cx+2,st-2],[cx-2,st-1],[cx+2,st-1],[cx-1,st],[cx+1,st]].forEach(([c,r])=>px(c,r,pal.p[1]));
+    [[cx-1,st-2],[cx,st-2],[cx+1,st-2],[cx,st-3],[cx-1,st-1],[cx,st-1],[cx+1,st-1],[cx,st]].forEach(([c,r])=>px(c,r,pal.p[2]));
+    px(cx,st-2,pal.c);
+  } else {
+    [[cx,st-4],[cx-1,st-3],[cx+1,st-3],[cx-3,st-2],[cx+3,st-2],[cx-3,st-1],[cx+3,st-1],[cx-2,st],[cx+2,st],[cx-1,st+1],[cx+1,st+1]].forEach(([c,r])=>px(c,r,pal.p[0]));
+    [[cx-2,st-2],[cx+2,st-2],[cx-2,st-1],[cx+2,st-1],[cx-1,st-1],[cx+1,st-1],[cx-1,st],[cx+1,st]].forEach(([c,r])=>px(c,r,pal.p[1]));
+    [[cx,st-3],[cx,st-2],[cx,st-1],[cx,st]].forEach(([c,r])=>px(c,r,pal.c));
+  }
+  return grid;
+}
+
+class Flower{
+  constructor(x){
+    this.x       = x + (Math.random()-0.5)*30;
+    this.groundY = H - 8 - Math.random()*28;
+    this.pal     = PAL[Math.floor(Math.random()*PAL.length)];
+    this.variant = Math.floor(Math.random()*6);
+    this.S       = Math.floor(Math.random()*5)+5;
+    this.grid    = buildFlowerGrid(this.pal, this.variant);
+    this.prog    = 0;
+    this.speed   = 0.007 + Math.random()*0.008;
+    this.sway    = Math.random()*Math.PI*2;
+    this.swaySpd = 0.25+Math.random()*0.5;
+    this.swayAmp = 2+Math.random()*4;
+  }
+  update(){
+    if(this.prog<1) this.prog=Math.min(1,this.prog+this.speed);
+    this.sway += this.swaySpd*0.016;
+  }
+  draw(){
+    const S=this.S, swX=Math.sin(this.sway)*this.swayAmp;
+    const ox=Math.round(this.x-(COLS*S)/2+swX);
+    const visibleRows=Math.ceil(this.prog*ROWS);
+    const startRow=ROWS-visibleRows;
+    for(let r=startRow;r<ROWS;r++){
+      const screenY=Math.round(this.groundY-(ROWS-r)*S);
+      for(let c=0;c<COLS;c++){
+        const color=this.grid[r][c];
+        if(!color) continue;
+        ctx.fillStyle=color;
+        ctx.fillRect(ox+c*S, screenY, S, S);
+      }
+    }
+  }
+}
+
+function addSparks(x,y){
+  for(let i=0;i<14;i++){
+    const a=(Math.PI*2*i/14)+Math.random()*0.4;
+    sparks.push({
+      x,y,
+      vx:Math.cos(a)*(1+Math.random()*4),
+      vy:Math.sin(a)*(1+Math.random()*4)-3,
+      life:1, r:Math.random()*3.5+0.8,
+      color:['#f0e0a0','#ffc080','#ff9060','#e060a0','#f0c0d0','#ffd080'][Math.floor(Math.random()*6)]
+    });
+  }
+}
+
+// ── Scooter Lime — cabello chica, manubrio +1col, camino con perspectiva ─────
+// S=3px. Cambios: GH=cabello chica (lila claro), manubrio 4 cols, road function.
+
+const SC_GRID = [
+// col:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+  [ 0, 0, 0,'BL','B','B', 0, 0,'GL','G','G','GH', 0, 0, 0, 0, 0], //  0 cabezas top + pelo
+  [ 0, 0,'BL','B','B','B','B','GL','G','G','G','G','GH', 0, 0, 0, 0], //  1 cabezas + pelo
+  [ 0, 0,'BL','B','B','B','B','GL','G','G','G','G','GH', 0, 0, 0, 0], //  2 cabezas + pelo
+  [ 0, 0, 0,'BL','B','B', 0, 0,'GL','G','G','G','GH', 0, 0, 0, 0], //  3 cuellos + pelo cae
+  [ 0, 0,'BL','B','B','B','B','GL','G','G','G','G','G','GH', 0, 0, 0], //  4 hombros + pelo largo
+  [ 0, 0,'BL','B','B','B','B','GL','G','G','G','G','G','GH', 0, 0, 0], //  5 hombros + pelo
+  [ 0, 0,'BL','B','B','B','B','GL','G','G','G','G','G', 0, 0, 0, 0], //  6 torso top
+  [ 0, 0, 0,'BL','B','B','B','GL','G','G','G','G', 0, 0, 0, 0, 0], //  7 torso
+  [ 9, 9, 9, 9, 0,'BL','B','GL','G','G','G','G', 0, 0, 0, 0, 0], //  8 manubrio brazo horizontal
+  [ 0, 0, 0, 9, 0,'BL','B','GL','G','G','G','G', 0, 0, 0, 0, 0], //  9 manubrio centro
+  [ 0, 0, 0, 9, 0,'BL','B','GL','G','G','G','G', 0, 0, 0, 0, 0], // 10 stem
+  [ 0, 0, 0, 9, 0,'BL','B','GL','G','G','G','G', 0, 0, 0, 0, 0], // 11 stem
+  [ 0, 0, 0, 9,'BL','B','B','GL','G','G','G','G','G', 0, 0, 0, 0], // 12 stem
+  [ 0, 0, 0, 9,'BL','B','B','GL','G','G','G','G','G', 0, 0, 0, 0], // 13 stem
+  [ 0, 0, 0, 9,'BL','B','B','GL','G','G','G','G','G', 0, 0, 0, 0], // 14 stem
+  [ 0, 0, 0, 9,'BL','B', 0,'GL','G', 0,'G','G', 0, 0, 0, 0, 0], // 15 stem + piernas
+  [ 0, 0, 0, 9,'BL','B', 0,'GL','G', 0,'G','G', 0, 0, 0, 0, 0], // 16 stem + piernas
+  [ 0, 0, 0, 9,'BL', 0, 0,'GL', 0, 0,'G', 0, 0, 0, 0, 0, 0], // 17 stem tobillos
+  [ 5, 0, 0, 9,'BL', 0, 0,'GL', 0, 0,'G', 0, 0, 0, 0, 0, 6], // 18 faro+stem+pies+tail
+  [ 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 0], // 19 deck top (10 cols: 3-12)
+  [ 0, 0, 2, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 2, 0, 0], // 20 deck
+  [ 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0], // 21 deck bottom
+  [ 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 0], // 22 ruedas top
+  [ 3, 4, 4, 4, 3, 0, 0, 0, 0, 0, 0, 0, 3, 4, 4, 4, 3], // 23 ruedas
+  [ 3, 4, 2, 4, 3, 0, 0, 0, 0, 0, 0, 0, 3, 4, 2, 4, 3], // 24 hub
+  [ 3, 4, 4, 4, 3, 0, 0, 0, 0, 0, 0, 0, 3, 4, 4, 4, 3], // 25 ruedas
+  [ 0, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 0], // 26 ruedas bottom
+];
+
+const SC_COLORS = {
+  1:'#4aaa38', 2:'#0a0e08', 3:'#181818', 4:'#484848',
+  5:'#fff8b0', 6:'#cc1818', 7:'#2d7a24', 8:'#282828', 9:'#8090a0',
+  'B' :'#14122a',
+  'BL':'#2a3060',
+  'G' :'#200e28',
+  'GL':'#38204a',
+  'GH':'#5a3870', // cabello chica — lila visible, más claro que el casco
+};
+
+// ── Camino empedrado irregular — piedras random, scooter con curvas ──────────
+// Piedras irregulares tipo pixel art, camino horizontal en franja inferior.
+// El scooter sigue una trayectoria sinusoidal sobre el camino.
+
+// Seed para piedras consistentes entre frames
+const STONES = [];
+function buildStones(){
+  STONES.length = 0;
+  // Generamos piedras irregulares relleno la banda del camino
+  // roadTop = H*0.82, roadBot = H*0.99
+  // Cada piedra tiene: x, y, w, h, shade (variación de gris)
+  const seed = 42;
+  let rx = seed;
+  function rnd(){ rx = (rx*1664525+1013904223)&0xffffffff; return (rx>>>0)/0xffffffff; }
+
+  const roadTopFrac = 0.82;
+  const roadBotFrac = 0.99;
+
+  // Generamos en grid con jitter, tamaños irregulares
+  const cols = 48, rows = 6;
+  for(let r=0; r<rows; r++){
+    for(let c=0; c<cols; c++){
+      const cellW = 1.0 / cols;
+      const cellH = (roadBotFrac - roadTopFrac) / rows;
+      // jitter posición
+      const jx = (rnd()-0.5)*cellW*0.6;
+      const jy = (rnd()-0.5)*cellH*0.5;
+      // tamaño irregular: entre 0.4 y 0.9 del cell
+      const sw = cellW * (0.45 + rnd()*0.45);
+      const sh = cellH * (0.45 + rnd()*0.45);
+      const cx = (c + 0.5)/cols + jx;
+      const cy = roadTopFrac + (r + 0.5)*cellH + jy;
+      const shade = rnd(); // 0=más oscuro, 1=más claro
+      STONES.push({ cx, cy, sw, sh, shade });
+    }
+  }
+}
+
+function drawRoad(horizon, np, t, rp){
+  // Road top aligns with post office base (horizon + 30px)
+  // Animates in by sliding up from H to its final position
+  const roadTopFinal = horizon + 30;
+  const roadBotFinal = H * 1.02;
+
+  // Slide-in animation: road sweeps up from H over rp (0→1)
+  const ease = rp < 1 ? 1 - Math.pow(1 - rp, 3) : 1; // ease-out cubic
+  const roadTop = roadBotFinal - (roadBotFinal - roadTopFinal) * ease;
+  const roadBot = roadBotFinal;
+  const roadH   = roadBot - roadTop;
+  if(roadH <= 0) return;
+
+  // Clip to road band so stones don't draw above it during animation
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, roadTop, W, roadH);
+  ctx.clip();
+
+  // ── Fondo base del camino ──
+  const baseGrad = ctx.createLinearGradient(0, roadTop, 0, roadBot);
+  if(np > 0.4){
+    baseGrad.addColorStop(0, '#1a1824');
+    baseGrad.addColorStop(1, '#12101a');
+  } else {
+    baseGrad.addColorStop(0, '#1e1610');
+    baseGrad.addColorStop(1, '#140e08');
+  }
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(0, roadTop, W, roadH);
+
+  // ── Piedras irregulares ──
+  for(const st of STONES){
+    const px = st.cx * W;
+    // remap stone cy (0.82..0.99) to current roadTop..roadBot
+    const normCy = (st.cy - 0.82) / (0.99 - 0.82);
+    const py = roadTop + normCy * roadH;
+    const pw = st.sw * W;
+    const ph = st.sh * roadH;
+
+    let rb, gb, bb;
+    if(np > 0.4){
+      const v = Math.round(28 + st.shade * 22);
+      rb = v; gb = v+2; bb = v+8;
+    } else {
+      const v = Math.round(30 + st.shade * 24);
+      rb = v+4; gb = v+2; bb = v;
+    }
+
+    ctx.fillStyle = `rgba(${Math.round(rb*0.6)},${Math.round(gb*0.6)},${Math.round(bb*0.6)},0.8)`;
+    ctx.fillRect(px - pw/2 + 2, py - ph/2 + 2, pw, ph);
+
+    ctx.fillStyle = `rgb(${rb},${gb},${bb})`;
+    ctx.fillRect(px - pw/2, py - ph/2, pw, ph);
+
+    const rimA = np > 0.4 ? 0.15 + st.shade*0.12 : 0.10 + st.shade*0.10;
+    const rimR = np > 0.4 ? 180 : 210;
+    const rimG = np > 0.4 ? 185 : 170;
+    const rimB = np > 0.4 ? 210 : 120;
+    ctx.fillStyle = `rgba(${rimR},${rimG},${rimB},${rimA})`;
+    ctx.fillRect(px - pw/2, py - ph/2, pw, 1.5);
+
+    if(np > 0.35){
+      const sideA = (np-0.35)*0.18*st.shade;
+      ctx.fillStyle = `rgba(180,190,220,${sideA})`;
+      ctx.fillRect(px - pw/2, py - ph/2, 1.5, ph);
+    }
+  }
+
+  // ── Borde superior ──
+  const edgeA = np > 0.4 ? 0.5 : 0.4;
+  ctx.fillStyle = np > 0.4 ? `rgba(60,55,80,${edgeA})` : `rgba(80,60,30,${edgeA})`;
+  ctx.fillRect(0, roadTop, W, 2);
+
+  // ── Reflejo lunar ──
+  if(np > 0.35){
+    const moonRefl = ctx.createRadialGradient(W*0.15, roadTop, 0, W*0.15, roadTop+roadH*0.5, W*0.65);
+    moonRefl.addColorStop(0, `rgba(200,210,240,${(np-0.35)*0.10})`);
+    moonRefl.addColorStop(1, 'rgba(180,190,220,0)');
+    ctx.fillStyle = moonRefl;
+    ctx.fillRect(0, roadTop, W, roadH);
+  }
+
+  ctx.restore(); // end clip
+}
+
+// Trayectoria sinusoidal del scooter — cuarto superior del camino
+function getScooterY(t, horizon){
+  const roadTop  = horizon + 30;
+  const roadBot  = H * 1.02;
+  const roadCtr  = roadTop + (roadBot - roadTop) * 0.12; // higher — top 12%
+  const amp      = (roadBot - roadTop) * 0.05;
+  return roadCtr - amp * Math.sin(t * 0.38);
+}
+
+// ── Faroles a lo largo del camino — mismo estilo que el de la post office ────
+// Posiciones fijas en X (porcentaje del ancho), aparecen con el camino
+function drawLanterns(horizon, np, rp, t){
+  if(rp <= 0) return;
+  const alpha   = Math.min(1, rp * 2);
+  const roadTop = horizon + 30;
+
+  // Posiciones X de los faroles — sin el de la derecha cercano a PO
+  const positions = [0.10, 0.28, 0.46];
+
+  // Parpadeo individual por farol
+  const pulse = t;
+
+  positions.forEach((xFrac, i) => {
+    const lx  = Math.round(W * xFrac);
+    const lf  = 0.85 + Math.sin(pulse * 1.1 + i * 1.7) * 0.15;
+
+    // Mismo S y baseY que el farol de la post office
+    const lS    = 5;
+    const baseY = roadTop;
+    const ly    = baseY - LN_GRID.length * lS;
+
+    // headY = centro de los píxeles de glow (rows 1-3 del LN_GRID)
+    const headY  = ly + 2 * lS; // row 2 = centro del glow
+    const haloR  = lS * (5 + np * 9);
+    const haloA  = (0.20 + np * 0.38) * alpha;
+    const grd    = ctx.createRadialGradient(lx, headY, 0, lx, headY, haloR);
+    grd.addColorStop(0, `rgba(255,210,80,${haloA})`);
+    grd.addColorStop(0.4,`rgba(255,160,40,${haloA*0.5})`);
+    grd.addColorStop(1,  'rgba(255,120,20,0)');
+    ctx.fillStyle = grd;
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(lx, headY, haloR, 0, Math.PI*2); ctx.fill();
+
+    // Mismo pixel grid que LN_GRID (18 rows, S=5) — idéntico al de la PO
+    ctx.globalAlpha = alpha;
+    LN_GRID.forEach((row, r) => {
+      row.forEach((v, c) => {
+        if(!v) return;
+        let col;
+        if(v === 2)  col = '#1e1420';
+        if(v === 12) col = `rgb(255,${Math.round(220*lf)},${Math.round(100*lf)})`;
+        if(!col) return;
+        ctx.fillStyle = col;
+        ctx.fillRect(lx - LN_GRID[0].length*lS/2 + c*lS, ly + r*lS, lS, lS);
+      });
+    });
+    ctx.globalAlpha = 1;
+  });
+}
+
+class Scooter {
+  constructor(){
+    this.x      = W + 80;
+    this.S      = 3;
+    this.cols   = SC_GRID[0].length;
+    this.rows   = SC_GRID.length;
+    this.speed  = 1.5;
+    this.prog   = 0;
+    this.wobble = 0;
+    this.puffs  = [];
+    this.puffT  = 0;
+  }
+  update(horizon){
+    this.horizon = horizon;
+    this.x -= this.speed;
+    this.wobble += 0.07;
+    this.t = (this.t || 0) + 0.016;
+    this.puffT++;
+    if(this.x < -(this.cols*this.S + 80)) this.x = W + 80;
+    if(this.puffT % 28 === 0){
+      const ey = getScooterY(this.t, horizon) - 4*this.S;
+      this.puffs.push({ x:this.x+this.cols*this.S+3, y:ey, r:1.5, life:1, vx:1.3, vy:-0.15 });
+    }
+    this.puffs = this.puffs.filter(p=>p.life>0);
+    this.puffs.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.r+=0.35; p.life-=0.025; });
+    this.prog = Math.min(1, this.prog+0.02);
+  }
+  draw(){
+    const S    = this.S;
+    const baseY= getScooterY(this.t||0, this.horizon||H*0.75);
+    const wobY = Math.sin(this.wobble)*0.6;
+    const ox   = Math.round(this.x);
+    const oy   = Math.round(baseY - this.rows*S + wobY);
+
+    // faro puntual — col 0 row 18
+    const hlX = ox + S/2;
+    const hlY = oy + 18*S + S/2;
+    const hlG = ctx.createRadialGradient(hlX, hlY, 0, hlX, hlY, 55);
+    hlG.addColorStop(0,   `rgba(255,252,190,${0.9*this.prog})`);
+    hlG.addColorStop(0.2, `rgba(255,240,140,${0.38*this.prog})`);
+    hlG.addColorStop(0.6, `rgba(255,220,80,${0.1*this.prog})`);
+    hlG.addColorStop(1,   'rgba(255,200,60,0)');
+    ctx.fillStyle=hlG;
+    ctx.beginPath(); ctx.arc(hlX, hlY, 55, 0, Math.PI*2); ctx.fill();
+
+    // tail light — col 16 row 18
+    const tlX = ox + 16*S + S/2;
+    const tlY = oy + 18*S + S/2;
+    const tlG = ctx.createRadialGradient(tlX,tlY,0,tlX,tlY,12);
+    tlG.addColorStop(0,`rgba(230,20,20,${0.7*this.prog})`);
+    tlG.addColorStop(1,'rgba(180,10,10,0)');
+    ctx.fillStyle=tlG;
+    ctx.beginPath(); ctx.arc(tlX, tlY, 12, 0, Math.PI*2); ctx.fill();
+
+    // exhaust
+    this.puffs.forEach(p=>{
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(150,150,160,${p.life*0.18})`; ctx.fill();
+    });
+
+    // pixel grid
+    ctx.globalAlpha = this.prog;
+    SC_GRID.forEach((row,r)=>{
+      const sy = oy + r*S;
+      row.forEach((v,c)=>{
+        if(!v) return;
+        let col = SC_COLORS[v];
+        if(!col) return;
+        if(v===5){
+          const f=0.93+Math.sin(this.wobble*4)*0.07;
+          col=`rgb(255,${Math.round(248*f)},${Math.round(140*f)})`;
+        }
+        if(v===6){
+          const f=0.8+Math.sin(this.wobble*2.5)*0.2;
+          col=`rgb(${Math.round(220*f)},15,15)`;
+        }
+        ctx.fillStyle=col;
+        ctx.fillRect(ox+c*S, sy, S, S);
+      });
+    });
+    ctx.globalAlpha=1;
+  }
+}
+
+function addRipple(x,y){
+  ripples.push({x,y,r:0,life:1,maxR:60+Math.random()*30});
+}
+
+function plant(ex){
+  flowers.push(new Flower(ex));
+  addSparks(ex, H-30);
+  addRipple(ex, H-20);
+  total++;
+  ctrEl.textContent=total+(total===1?' flower':' flowers');
+  ctrEl.style.opacity='1';
+  if(total===1) hint.classList.add('gone');
+  if(total>=REVEAL&&!revealed){ revealed=true; setTimeout(()=>msg.classList.add('show'),900); }
+  if(total===POST_OFFICE_AT && !postOffice){
+    postOffice = new PostOffice();
+    msg.classList.add('rise');
+  }
+  // Night transition starts at 23, each click advances it
+  if(total >= NIGHT_AT){
+    nightProgress = Math.min(1, nightProgress + 0.06);
+  }
+  if(total === SCOOTER_AT && !scooter){ scooter = new Scooter(); }
+  if(total === LETTER_AT && !letter){
+    // Start letter flying from post office position
+    const poX = W * 0.68;
+    const horizon = H * 0.75;
+    letter = { x: poX, y: horizon - 60, tx: W/2, ty: H/2, prog: 0, phase: 'fly' };
+    document.getElementById('letter-wrap').classList.add('active');
+  }
+}
+
+document.addEventListener('click', e=>plant(e.clientX));
+document.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  [...e.touches].forEach(t=>plant(t.clientX));
+},{passive:false});
+
+// Prevent letter-wrap clicks from planting flowers
+document.getElementById('letter-wrap').addEventListener('click', e=>e.stopPropagation());
+document.getElementById('letter-wrap').addEventListener('touchstart', e=>e.stopPropagation(), {passive:false});
+
+// Envelope — open letter on click
+document.getElementById('envelope').addEventListener('click', e=>{
+  e.stopPropagation();
+  if(!letter || letter.phase !== 'hover') return;
+  letter.phase = 'open';
+  document.getElementById('envelope').style.display = 'none';
+  document.getElementById('letter').classList.add('open');
+});
+
+// Close letter
+document.getElementById('letter-close').addEventListener('click', e=>{
+  e.stopPropagation();
+  const l = document.getElementById('letter');
+  l.classList.remove('open');
+  setTimeout(()=>{ l.style.display='none'; }, 800);
+});
+
+function loop(){
+  const t=Date.now()/1000;
+  const horizon = H * 0.75;
+  const np = nightProgress;
+
+  // Sky (blends sunset → night)
+  drawSky(horizon, np);
+
+  // Night stars fade in
+  if(np > 0){
+    nightStars.forEach(s=>{
+      const a = (s.base + 0.15*Math.sin(t*s.sp*60+s.ph)) * Math.min(1, np*2);
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(240,235,220,${a})`; ctx.fill();
+    });
+  }
+
+  // Moon rises with night
+  drawMoon(np);
+
+  // Sun fades out
+  drawSun(horizon, np);
+
+  // Clouds — fade out as night comes
+  const cloudAlpha = Math.max(0, 1 - np * 1.5);
+  if(cloudAlpha > 0){
+    ctx.globalAlpha = cloudAlpha;
+    clouds.forEach(cloud=>{
+      cloud.x += cloud.speed * 0.4;
+      if(cloud.x > W + 200) cloud.x = -200;
+      if(cloud.x < -300) cloud.x = W + 100;
+      drawCloud(cloud, t, horizon);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  // Horizon glow fades with sunset
+  const hglowA = Math.max(0, 0.18 - np*0.18);
+  if(hglowA > 0){
+    const hglow = ctx.createLinearGradient(0, horizon-30, 0, horizon+30);
+    hglow.addColorStop(0,'rgba(240,120,30,0)');
+    hglow.addColorStop(0.5,`rgba(255,160,40,${hglowA})`);
+    hglow.addColorStop(1,'rgba(240,80,20,0)');
+    ctx.fillStyle=hglow; ctx.fillRect(0, horizon-30, W, 60);
+  }
+
+  // Ground
+  drawGround(horizon, np);
+
+  // Road — appears when scooter exists, slides up from bottom
+  if(scooter){
+    roadProgress = Math.min(1, roadProgress + 0.008);
+    drawRoad(horizon, np, t, roadProgress);
+    drawLanterns(horizon, np, roadProgress, t);
+  }
+
+  // Ground fade at very bottom
+  const gfade=ctx.createLinearGradient(0,H-90,0,H);
+  gfade.addColorStop(0,'transparent'); gfade.addColorStop(1,'#0a0604');
+  ctx.fillStyle=gfade; ctx.fillRect(0,H-90,W,90);
+
+  // Post office
+  if(postOffice){ postOffice.update(np); postOffice.draw(horizon, np); }
+
+  // Ripples
+  ripples=ripples.filter(r=>r.life>0);
+  ripples.forEach(r=>{
+    r.r+=1.5; r.life-=0.03;
+    ctx.beginPath(); ctx.arc(r.x,H-15,r.r,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(240,140,60,${r.life*0.3})`;
+    ctx.lineWidth=1.5; ctx.stroke();
+  });
+
+  // Scooter BEHIND flowers (lower z-order)
+  if(scooter){ scooter.update(horizon); scooter.draw(); }
+
+  // Flowers on top of scooter
+  flowers.forEach(f=>{f.update();f.draw();});
+
+  // Sparks
+  sparks=sparks.filter(s=>s.life>0);
+  sparks.forEach(s=>{
+    s.x+=s.vx; s.y+=s.vy; s.vy+=0.1; s.life-=0.022;
+    ctx.beginPath(); ctx.arc(s.x,s.y,Math.max(0,s.r*s.life),0,Math.PI*2);
+    ctx.fillStyle=s.color; ctx.globalAlpha=s.life; ctx.fill(); ctx.globalAlpha=1;
+  });
+
+  // Letter — flies from post office to center, then hovers
+  if(letter && letter.phase !== 'open'){
+    letter.prog = Math.min(1, letter.prog + 0.018);
+    const ease = 1 - Math.pow(1 - letter.prog, 3);
+    const lx = letter.x + (letter.tx - letter.x) * ease;
+    const ly = letter.y + (letter.ty - letter.y) * ease;
+    const env = document.getElementById('envelope');
+    env.style.left = lx + 'px';
+    env.style.top  = ly + 'px';
+    env.style.transform = 'translate(-50%,-50%)';
+    env.style.opacity = String(Math.min(1, letter.prog * 3));
+    if(letter.prog >= 1 && letter.phase === 'fly'){
+      letter.phase = 'hover';
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', resize);
+resize();
+loop();
+</script>
+</body>
+</html>
